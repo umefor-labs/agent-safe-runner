@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-safe-runner"
-version = "0.2.0"
+version = "0.2.1"
 description = "A local-first, auditable job runner for AI-agent automation"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-authors = [{ name = "JARVIS contributors" }]
+authors = [{ name = "Umefor Labs" }]
 keywords = ["agents", "automation", "job-queue", "local-first", "security"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -22,6 +22,12 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/umefor-labs/agent-safe-runner"
+Documentation = "https://github.com/umefor-labs/agent-safe-runner/blob/main/docs/getting-started.md"
+Issues = "https://github.com/umefor-labs/agent-safe-runner/issues"
+Source = "https://github.com/umefor-labs/agent-safe-runner"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

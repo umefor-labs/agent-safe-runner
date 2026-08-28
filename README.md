@@ -1,5 +1,9 @@
 # agent-safe-runner
 
+[![CI](https://github.com/umefor-labs/agent-safe-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/umefor-labs/agent-safe-runner/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 `agent-safe-runner` is a small, local-first queue for automation commands proposed by AI agents. It stores jobs in SQLite, requires an explicit command policy before execution, and writes a redacted JSONL audit trail.
 
 The project is intentionally narrow: it helps a local operator control which commands may run, when they may run, and what evidence is retained afterward.
@@ -36,60 +40,106 @@ This runner makes those controls explicit without adding a service, broker, or c
 
 Python 3.11 or newer is required.
 
-```bash
-python -m pip install -e .
-```
-
-For development:
+Install the latest version directly from GitHub:
 
 ```bash
-python -m pip install -e ".[dev]"
-python -m pytest
+python -m pip install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
 ```
+
+Confirm that the command is available:
+
+```bash
+agent-safe --version
+```
+
+The package is not on PyPI yet. If your system does not expose the `agent-safe`
+command after installation, use `python -m agent_safe_runner` in its place.
+
+For an isolated installation with `pipx`, see the
+[getting-started guide](docs/getting-started.md). Contributors should use the
+[development setup](CONTRIBUTING.md).
 
 ## Quick start
 
-Create a conservative policy template:
+Create a dedicated workspace so the queue, policy, and audit files stay together:
 
 ```bash
+mkdir agent-safe-workspace
+cd agent-safe-workspace
 agent-safe init-policy
 ```
 
-Review `agent-safe-policy.json` before using it. The sample permits only command prefixes such as `python -m pytest` and `git status` inside the policy directory.
+The generated `agent-safe-policy.json` denies everything except a few narrow,
+harmless examples. Review it before adding any command.
 
-Queue a command. Everything after `--` is stored as an argument vector; no shell parser is involved.
+Queue a command that prints the installed Python version:
 
 ```bash
-agent-safe submit --cwd . --timeout 120 --max-attempts 2 -- python -m pytest -q
+agent-safe submit --cwd . --timeout 30 -- python --version
 ```
 
-Inspect and assess it without execution:
+The command returns a JSON object. Copy its `id`, then inspect the job and perform
+a dry run. Replace `JOB_ID` below with that value:
 
 ```bash
-agent-safe list --status queued
 agent-safe show JOB_ID
 agent-safe run JOB_ID
 ```
 
-Execute only after reviewing the job and policy:
+The dry run checks the policy but does not execute the command. Execute only after
+reviewing the stored command and policy decision:
 
 ```bash
 agent-safe run JOB_ID --execute --worker local-1
 ```
 
-Process at most one available job:
-
-```bash
-agent-safe work --once --execute --worker local-1
-```
-
-Verify the audit chain:
+The final JSON should report `"status": "succeeded"`. Verify the audit chain's
+integrity:
 
 ```bash
 agent-safe audit-verify
 ```
 
-All commands emit JSON. Expected user and policy errors return exit code `2` with a stable error code.
+See [Getting started](docs/getting-started.md) for installation isolation,
+upgrades, troubleshooting, and a complete first-run walkthrough.
+
+## Common commands
+
+```bash
+agent-safe list
+agent-safe list --status queued --status retry_wait
+agent-safe show JOB_ID
+agent-safe cancel JOB_ID
+agent-safe retry JOB_ID
+agent-safe work --once --execute --worker local-1
+agent-safe audit-verify
+```
+
+Global paths must appear before the subcommand:
+
+```bash
+agent-safe --db /path/to/jobs.sqlite3 --audit /path/to/audit.jsonl --policy /path/to/policy.json list
+```
+
+Everything after `--` in `submit` is stored as an argument vector and is never
+passed through a shell parser. All commands emit JSON. Expected input, state, and
+policy errors return exit code `2` with a stable error code.
+
+## Upgrade and uninstall
+
+Upgrade to the latest GitHub version:
+
+```bash
+python -m pip install --upgrade "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
+```
+
+Remove the command-line application:
+
+```bash
+python -m pip uninstall agent-safe-runner
+```
+
+Uninstalling does not delete your queue, policy, or audit files.
 
 ## Policy
 
@@ -99,6 +149,7 @@ Execution is denied when the policy file is absent. A policy contains:
 {
   "version": 1,
   "allowed_commands": [
+    {"program": "python", "args_prefix": ["--version"]},
     {"program": "python", "args_prefix": ["-m", "pytest"]},
     {"program": "git", "args_prefix": ["status"]}
   ],

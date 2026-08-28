@@ -86,6 +86,7 @@ class Policy:
         return {
             "version": 1,
             "allowed_commands": [
+                {"program": "python", "args_prefix": ["--version"]},
                 {"program": "python", "args_prefix": ["-m", "pytest"]},
                 {"program": "git", "args_prefix": ["status"]},
             ],

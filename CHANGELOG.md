@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-28
+
+### Added
+
+- End-user installation, upgrade, uninstall, troubleshooting, and first-run instructions.
+- `agent-safe --version` and `python -m agent_safe_runner` entry points.
+- A harmless `python --version` rule in the generated sample policy.
+
+### Changed
+
+- Package metadata now links to the Umefor Labs repository, documentation, and issue tracker.
+- CI action runtimes were updated and now include an installed-command smoke test.
+
 ## [0.2.0] - 2026-08-28
 
 ### Added

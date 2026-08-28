@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
+from . import __version__
 from .audit import AuditLog
 from .core import JobStore
 from .errors import RunnerError
@@ -31,6 +32,7 @@ def _command(parts: Sequence[str]) -> tuple[str, ...]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-safe", description="Local-first, policy-gated job runner")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--db", default="agent-safe.sqlite3", help="SQLite queue path")
     parser.add_argument("--audit", default="audit.jsonl", help="JSONL audit path")
     parser.add_argument("--policy", default="agent-safe-policy.json", help="Policy JSON path")
