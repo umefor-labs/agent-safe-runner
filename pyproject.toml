@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-safe-runner"
+version = "0.2.0"
+description = "A local-first, auditable job runner for AI-agent automation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "JARVIS contributors" }]
+keywords = ["agents", "automation", "job-queue", "local-first", "security"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+agent-safe = "agent_safe_runner.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_safe_runner"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

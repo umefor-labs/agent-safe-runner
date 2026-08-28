@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "allowed_commands": [
+    {"program": "python", "args_prefix": ["-m", "pytest"]},
+    {"program": "git", "args_prefix": ["status"]}
+  ],
+  "allowed_working_roots": ["."],
+  "denied_arguments": ["--force", "--hard"],
+  "environment_allowlist": ["PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP"],
+  "max_timeout_seconds": 300,
+  "max_output_chars": 8000
+}
