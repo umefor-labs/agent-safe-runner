@@ -6,6 +6,23 @@ Thanks for helping improve `agent-safe-runner`.
 
 ```bash
 python -m venv .venv
+```
+
+Activate it in PowerShell on Windows:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Or on macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Then install and test (repeat the install after changing package metadata):
+
+```bash
 python -m pip install -e ".[dev]"
 python -m pytest
 ```

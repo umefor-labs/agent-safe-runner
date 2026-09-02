@@ -8,7 +8,7 @@ from typing import Any, Sequence
 
 from . import __version__
 from .audit import AuditLog
-from .core import JobStore
+from .core import APPROVAL_STATUSES, JobStore
 from .errors import RunnerError
 from .policy import Policy
 
@@ -51,11 +51,28 @@ def build_parser() -> argparse.ArgumentParser:
     listing = sub.add_parser("list", help="List jobs")
     listing.add_argument("--status", action="append", choices=STATUSES, default=[])
     listing.add_argument("--limit", type=int, default=100)
+    listing.add_argument("--approval", choices=APPROVAL_STATUSES)
+
+    inbox = sub.add_parser("inbox", help="List pending jobs awaiting an operator decision")
+    inbox.add_argument("--limit", type=int, default=100)
+
+    assess = sub.add_parser("assess", help="Report policy allowance without approving or executing")
+    assess.add_argument("job_id")
+
+    approve = sub.add_parser("approve", help="Approve a pending job that also passes policy")
+    approve.add_argument("job_id")
+    approve.add_argument("--by", required=True, help="Operator label, not authentication")
+    approve.add_argument("--reason")
+
+    deny = sub.add_parser("deny", help="Deny and cancel a pending job")
+    deny.add_argument("job_id")
+    deny.add_argument("--by", required=True, help="Operator label, not authentication")
+    deny.add_argument("--reason", required=True)
 
     show = sub.add_parser("show", help="Show one job")
     show.add_argument("job_id")
 
-    run = sub.add_parser("run", help="Assess a job; --execute permits policy-approved execution")
+    run = sub.add_parser("run", help="Dry-run a job; --execute requires approval and policy allowance")
     run.add_argument("job_id")
     run.add_argument("--execute", action="store_true")
     run.add_argument("--worker", default="direct")
@@ -68,7 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     cancel = sub.add_parser("cancel", help="Cancel a queued job")
     cancel.add_argument("job_id")
 
-    retry = sub.add_parser("retry", help="Reset a failed or cancelled job")
+    retry = sub.add_parser("retry", help="Reset failed, cancelled, or dead-letter jobs to pending approval")
     retry.add_argument("job_id")
 
     sub.add_parser("audit-verify", help="Verify the JSONL audit hash chain")
@@ -102,7 +119,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 _emit(job.to_dict())
             elif args.action == "list":
-                _emit([job.to_dict() for job in store.list(tuple(args.status), args.limit)])
+                _emit([job.to_dict() for job in store.list(tuple(args.status), args.limit, approval=args.approval)])
+            elif args.action == "inbox":
+                _emit([job.to_dict() for job in store.inbox(args.limit)])
+            elif args.action == "assess":
+                _emit(store.assess(args.job_id))
+            elif args.action == "approve":
+                _emit(store.approve(args.job_id, by=args.by, reason=args.reason).to_dict())
+            elif args.action == "deny":
+                _emit(store.deny(args.job_id, by=args.by, reason=args.reason).to_dict())
             elif args.action == "show":
                 _emit(store.get(args.job_id).to_dict())
             elif args.action == "run":

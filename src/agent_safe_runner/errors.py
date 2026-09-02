@@ -12,6 +12,10 @@ class InvalidJobState(RunnerError):
     code = "invalid_job_state"
 
 
+class ApprovalRequired(RunnerError):
+    code = "approval_required"
+
+
 class SensitiveInputError(RunnerError):
     code = "sensitive_input"
 

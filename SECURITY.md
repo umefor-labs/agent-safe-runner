@@ -18,3 +18,8 @@ Do not include active credentials or personal data. Rotate any credential expose
 ## Security boundary
 
 The runner does not sandbox a process. Its controls reduce accidental execution and retain evidence, but operating-system permissions remain the final boundary.
+
+Approval labels (`--by`) are not authenticated identities. An agent or user with
+access to the approval CLI or database can grant approval; use external permission
+separation for adversarial workloads. Never run older workers against an upgraded
+database: older versions do not enforce the approval gate.

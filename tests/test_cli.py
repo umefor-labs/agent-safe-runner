@@ -50,5 +50,7 @@ def test_sample_policy_allows_first_run_python_version(tmp_path, capsys):
     common = ["--db", str(database), "--audit", str(audit), "--policy", str(policy)]
     assert main([*common, "submit", "--cwd", str(tmp_path), "--", "python", "--version"]) == 0
     job = json.loads(capsys.readouterr().out)
+    assert main([*common, "approve", job["id"], "--by", "operator"]) == 0
+    assert json.loads(capsys.readouterr().out)["approval_status"] == "approved"
     assert main([*common, "run", job["id"], "--execute"]) == 0
     assert json.loads(capsys.readouterr().out)["status"] == "succeeded"

@@ -56,8 +56,10 @@ def test_dry_run_records_policy_assessment_without_execution(tmp_path):
 
 
 def test_policy_denial_dead_letters_without_execution(tmp_path):
-    store = make_store(tmp_path)
+    store = make_store(tmp_path, policy=allow_python(tmp_path))
     job = store.submit((sys.executable, "-c", "raise SystemExit(9)"), cwd=str(tmp_path))
+    store.approve(job.id, by="operator")
+    store.policy = Policy.deny_all()
     result = store.run(job.id, execute=True)
     assert result.status == "dead_letter"
     assert result.attempts == 0
@@ -68,6 +70,7 @@ def test_execute_records_redacted_output(tmp_path):
     store = make_store(tmp_path, policy=allow_python(tmp_path))
     code = "print('sk-' + 'abcdefghijklmnop')"
     job = store.submit((sys.executable, "-c", code), cwd=str(tmp_path))
+    store.approve(job.id, by="operator")
     result = store.run(job.id, execute=True)
     fake_token = "sk-" + "abcdefghijklmnop"
     assert result.status == "succeeded"
@@ -78,6 +81,7 @@ def test_execute_records_redacted_output(tmp_path):
 def test_succeeded_job_is_not_reopened_after_policy_changes(tmp_path):
     store = make_store(tmp_path, policy=allow_python(tmp_path))
     job = store.submit((sys.executable, "-c", "print('ok')"), cwd=str(tmp_path))
+    store.approve(job.id, by="operator")
     succeeded = store.run(job.id, execute=True)
     store.policy = Policy.deny_all()
     assert store.run(job.id, execute=True).status == "succeeded"
@@ -87,6 +91,7 @@ def test_succeeded_job_is_not_reopened_after_policy_changes(tmp_path):
 def test_failure_retries_with_bound_and_then_fails(tmp_path):
     store = make_store(tmp_path, policy=allow_python(tmp_path), retry_base_seconds=0)
     job = store.submit((sys.executable, "-c", "raise SystemExit(7)"), cwd=str(tmp_path), max_attempts=2)
+    store.approve(job.id, by="operator")
     first = store.run(job.id, execute=True, worker_id="worker-a")
     second = store.run(job.id, execute=True, worker_id="worker-a")
     assert first.status == "retry_wait"
@@ -106,9 +111,11 @@ def test_cancelled_job_can_be_manually_retried(tmp_path):
 
 def test_expired_lease_is_reclaimed_when_another_job_is_claimed(tmp_path):
     now = [100.0]
-    store = make_store(tmp_path, clock=lambda: now[0])
-    first = store.submit(("git", "status"), idempotency_key="first")
-    second = store.submit(("git", "status"), idempotency_key="second")
+    store = make_store(tmp_path, clock=lambda: now[0], policy=allow_python(tmp_path))
+    first = store.submit((sys.executable, "--version"), idempotency_key="first", cwd=str(tmp_path))
+    second = store.submit((sys.executable, "--version"), idempotency_key="second", cwd=str(tmp_path))
+    store.approve(first.id, by="operator")
+    store.approve(second.id, by="operator")
     store.claim(first.id, "worker-a", lease_seconds=1)
     now[0] = 102.0
     store.claim(second.id, "worker-b", lease_seconds=10)

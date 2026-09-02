@@ -10,12 +10,13 @@ from typing import Any
 from .errors import PolicyViolation
 
 
-def _resolved_program(value: str) -> str | None:
+def _resolved_program(value: str, cwd: str | None = None) -> str | None:
     candidate = Path(value)
-    if candidate.is_absolute() or candidate.parent != Path("."):
-        return str(candidate.resolve(strict=False)).casefold()
+    if candidate.is_absolute() or os.path.dirname(value):
+        candidate = Path(cwd or ".") / candidate
+        return os.path.normcase(str(candidate.resolve())) if candidate.is_file() else None
     located = shutil.which(value)
-    return str(Path(located).resolve(strict=False)).casefold() if located else None
+    return os.path.normcase(str(Path(located).resolve())) if located else None
 
 
 @dataclass(frozen=True)
@@ -23,12 +24,11 @@ class CommandRule:
     program: str
     args_prefix: tuple[str, ...] = ()
 
-    def matches(self, command: tuple[str, ...]) -> bool:
-        if not command or _resolved_program(command[0]) != _resolved_program(self.program):
+    def matches(self, command: tuple[str, ...], cwd: str | None = None) -> bool:
+        expected_program = _resolved_program(self.program)
+        if not command or expected_program is None or _resolved_program(command[0], cwd) != expected_program:
             return False
-        expected = tuple(item.casefold() for item in self.args_prefix)
-        actual = tuple(item.casefold() for item in command[1 : 1 + len(expected)])
-        return actual == expected
+        return command[1 : 1 + len(self.args_prefix)] == self.args_prefix
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ class Policy:
             return cls.deny_all()
         except json.JSONDecodeError as exc:
             raise PolicyViolation(f"invalid policy JSON: {exc}") from exc
-        if payload.get("version") != 1:
+        if not isinstance(payload, dict) or payload.get("version") != 1:
             raise PolicyViolation("unsupported policy version")
         try:
             rules = tuple(
@@ -68,7 +68,7 @@ class Policy:
             )
             max_timeout = int(payload.get("max_timeout_seconds", 300))
             max_output = int(payload.get("max_output_chars", 8000))
-        except (KeyError, TypeError, ValueError) as exc:
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
             raise PolicyViolation("invalid policy fields") from exc
         if not 1 <= max_timeout <= 86400 or not 256 <= max_output <= 1_000_000:
             raise PolicyViolation("policy limits are out of bounds")
@@ -97,10 +97,11 @@ class Policy:
             "max_output_chars": 8000,
         }
 
-    def authorize(self, command: tuple[str, ...], cwd: str | None, timeout: int) -> None:
+    def authorize(self, command: tuple[str, ...], cwd: str | None, timeout: int) -> CommandRule:
         if timeout > self.max_timeout_seconds:
             raise PolicyViolation(f"timeout exceeds policy limit of {self.max_timeout_seconds}s")
-        if not any(rule.matches(command) for rule in self.rules):
+        matched = next((rule for rule in self.rules if rule.matches(command, cwd)), None)
+        if matched is None:
             raise PolicyViolation("command does not match an allowlisted program and argument prefix")
         lowered_args = tuple(arg.casefold() for arg in command[1:])
         for denied in self.denied_arguments:
@@ -113,6 +114,7 @@ class Policy:
             resolved_cwd == root or resolved_cwd.is_relative_to(root) for root in self.allowed_roots
         ):
             raise PolicyViolation("working directory is outside allowed roots")
+        return matched
 
     def environment(self) -> dict[str, str]:
         allowed = {name.casefold() for name in self.environment_allowlist}

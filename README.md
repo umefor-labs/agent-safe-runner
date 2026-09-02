@@ -4,7 +4,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-`agent-safe-runner` is a small, local-first queue for automation commands proposed by AI agents. It stores jobs in SQLite, requires an explicit command policy before execution, and writes a redacted JSONL audit trail.
+`agent-safe-runner` is a small, local-first queue for automation commands proposed by AI agents. It stores jobs in SQLite, requires a separate approval decision and an explicit command policy before execution, and writes a redacted JSONL audit trail.
 
 The project is intentionally narrow: it helps a local operator control which commands may run, when they may run, and what evidence is retained afterward.
 
@@ -16,6 +16,7 @@ The project is intentionally narrow: it helps a local operator control which com
 Agent workflows often grow from scripts into unattended queues. At that point, a plain `subprocess.run()` leaves important questions unanswered:
 
 - Was the command explicitly allowed?
+- Who reviewed it before execution?
 - Could two workers run the same job?
 - Did a retry happen, and why?
 - Did logs accidentally store a token?
@@ -26,8 +27,9 @@ This runner makes those controls explicit without adding a service, broker, or c
 ## Features
 
 - Deny-by-default JSON policy with command-prefix and working-directory rules
-- Dry run by default; real execution requires `--execute`
-- SQLite queue with idempotency keys and schema migration from `0.1.x`
+- Approval inbox, read-only assessment, and explicit approve/deny decisions
+- Dry run by default; real execution requires approval, policy allowance, and `--execute`
+- SQLite queue with idempotency keys and fail-closed schema migration from `0.1.x` / `0.2.x`
 - Atomic leases, expired-lease recovery, bounded retries, and exponential backoff
 - Job cancellation, manual retry, status filtering, and one-pass worker mode
 - Secret-like argument rejection before persistence
@@ -69,8 +71,9 @@ cd agent-safe-workspace
 agent-safe init-policy
 ```
 
-The generated `agent-safe-policy.json` denies everything except a few narrow,
-harmless examples. Review it before adding any command.
+The generated `agent-safe-policy.json` contains a few example rules. Review it
+before use: `python --version` prints a version, but `pytest` executes project
+code and is appropriate only in a trusted workspace.
 
 Queue a command that prints the installed Python version:
 
@@ -83,15 +86,23 @@ a dry run. Replace `JOB_ID` below with that value:
 
 ```bash
 agent-safe show JOB_ID
+agent-safe assess JOB_ID
 agent-safe run JOB_ID
 ```
 
-The dry run checks the policy but does not execute the command. Execute only after
-reviewing the stored command and policy decision:
+`assess` returns `allowed`, `reason`, and `matched_rule`. An allowed job is still
+pending approval. `run` without `--execute` remains a dry run.
+
+After reviewing the exact command, directory, timeout, and retry limit, record
+your decision. Replace `local-operator` with a label meaningful to you:
 
 ```bash
+agent-safe approve JOB_ID --by local-operator --reason "Reviewed version check"
 agent-safe run JOB_ID --execute --worker local-1
 ```
+
+`--by` is an audit label, **not authentication**. Anyone with access to the
+approval CLI or writable database can approve jobs; this is a workflow gate.
 
 The final JSON should report `"status": "succeeded"`. Verify the audit chain's
 integrity:
@@ -107,8 +118,12 @@ upgrades, troubleshooting, and a complete first-run walkthrough.
 
 ```bash
 agent-safe list
+agent-safe inbox
+agent-safe list --approval pending
 agent-safe list --status queued --status retry_wait
 agent-safe show JOB_ID
+agent-safe assess JOB_ID
+agent-safe deny JOB_ID --by local-operator --reason "Not needed"
 agent-safe cancel JOB_ID
 agent-safe retry JOB_ID
 agent-safe work --once --execute --worker local-1
@@ -125,7 +140,16 @@ Everything after `--` in `submit` is stored as an argument vector and is never
 passed through a shell parser. All commands emit JSON. Expected input, state, and
 policy errors return exit code `2` with a stable error code.
 
+`work --once --execute` picks only approved jobs. Manual `retry` clears the old
+decision and requires fresh approval; automatic retries keep the existing
+approval for the unchanged job. `deny` cancels a pending job. To stop an already
+approved queued job, use `cancel`.
+
 ## Upgrade and uninstall
+
+**Upgrading from 0.2.x or older?** Stop all workers and back up your local state
+before installing. Old queued jobs become pending and will not run until
+reviewed. See the [0.3 migration guide](docs/migration-0.3.md).
 
 Upgrade to the latest GitHub version:
 
@@ -161,7 +185,7 @@ Execution is denied when the policy file is absent. A policy contains:
 }
 ```
 
-Rules compare the executable name and the beginning of its argument list. An empty `args_prefix` allows every argument for that executable and should be used cautiously.
+Rules compare resolved executable paths and the case-sensitive beginning of the argument list. Missing executables do not match. An empty `args_prefix` allows every argument for that executable and should be used cautiously.
 
 Never place credentials in a command. The runner rejects common secret flags and token formats, but detection cannot identify every secret. Use a dedicated secret provider and grant the worker only the environment variables it needs.
 
@@ -175,7 +199,10 @@ queued/retry_wait -> cancelled -> queued (manual retry)
 queued/retry_wait -> dead_letter (policy denial)
 ```
 
-Policy-invalid jobs are not retried automatically. Nonzero exits and timeouts retry only up to `max_attempts`.
+Approval is separate from execution status: `pending`, `approved`, `denied`, or
+`legacy` for historical records. New jobs start `queued` + `pending`.
+Policy-invalid approved jobs become `dead_letter` without spawning a process.
+Nonzero exits, timeouts, and process-start failures retry up to `max_attempts`.
 
 ## Data files
 
@@ -190,9 +217,12 @@ These runtime files are ignored by Git. SQLite commands are stored in plain text
 - The audit chain detects accidental edits; it is not a cryptographic signature and an attacker with write access can rebuild it.
 - Audit appends use advisory file locking on Windows and POSIX; filesystems that ignore advisory locks are unsupported for multi-process writers.
 - Running jobs cannot currently be interrupted by `cancel`; cancellation applies to queued and retry-wait jobs.
+- Approval records are not signatures or user authentication. This gate cannot constrain an agent that already has unrestricted terminal or file access.
+- SQLite state and JSONL audit are separate stores, not a single crash-atomic transaction. See [Architecture](docs/architecture.md).
+- Output limits bound stored text, not peak capture memory; lease recovery is at-least-once, not an exactly-once guarantee for external side effects.
 - There is no remote API, scheduler daemon, plugin system, or secret-provider integration yet.
 
-See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), [Contributing](CONTRIBUTING.md), and [Security policy](SECURITY.md).
+See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), [Roadmap](ROADMAP.md), [Contributing](CONTRIBUTING.md), and [Security policy](SECURITY.md).
 
 ## License
 
