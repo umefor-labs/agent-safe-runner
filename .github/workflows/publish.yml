@@ -41,9 +41,12 @@ jobs:
         run: python scripts/check_release.py dist
       - run: python -m twine check --strict dist/*
       - name: Verify pipx installation of the exact wheel
+        env:
+          PIPX_HOME: ${{ runner.temp }}/agent-safe-pipx
+          PIPX_BIN_DIR: ${{ runner.temp }}/agent-safe-bin
         run: |
-          pipx install --python "$(command -v python)" dist/*.whl
-          "$HOME/.local/bin/agent-safe" --version
+          python -m pipx install --python "$(command -v python)" dist/*.whl
+          "$PIPX_BIN_DIR/agent-safe" --version
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-distributions
