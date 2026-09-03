@@ -22,9 +22,12 @@ prioritizes useful, verifiable safeguards over feature count or artificial stars
 ## Distribution and adoption
 
 - GitHub source-archive installation remains supported.
-- PyPI publication requires a maintainer-owned account and configured trusted
-  publishing; the workflow and [setup checklist](docs/publishing.md) are included,
-  but do not advertise successful PyPI installation before it is verified.
+- [0.4.0 is published on PyPI](https://pypi.org/project/agent-safe-runner/0.4.0/).
+  A clean `pipx install agent-safe-runner` returned `agent-safe 0.4.0` on
+  September 3, 2026. The [release workflow](https://github.com/umefor-labs/agent-safe-runner/actions/runs/33763459743)
+  passed all eight Windows/Linux Python 3.11–3.14 test jobs, package validation,
+  and the exact-wheel pipx check before publishing via short-lived OIDC credentials.
+  Future releases must follow the same [publishing checklist](docs/publishing.md).
 - Ask real users to try a small workflow and report friction. Publish examples,
   fixes, and limitations; do not buy stars, exchange stars, or spam communities.
 - Keep an evidence-based release record: tests, CI, install checks, and user reports.

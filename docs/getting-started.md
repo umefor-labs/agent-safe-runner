@@ -16,39 +16,59 @@ python --version
 
 ## Install
 
-### Simple installation
-
-Install the current version directly from GitHub:
-
-```bash
-python -m pip install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
-```
-
-### Isolated installation with pipx
+### Recommended: isolated installation with pipx
 
 If `pipx` is already installed, it keeps the application separate from your
 other Python packages:
 
 ```bash
-pipx install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
+pipx install agent-safe-runner
 ```
 
-After a release is published on [PyPI](https://pypi.org/project/agent-safe-runner/),
-the shorter equivalent is `pipx install agent-safe-runner`. Before the first
-PyPI upload, use the GitHub URL above. For optional AI-agent tool integration,
-see [MCP setup](mcp.md).
+This installs the published [PyPI release](https://pypi.org/project/agent-safe-runner/).
+If you do not have pipx, follow its [installation guide](https://pipx.pypa.io/latest/how-to/install-pipx.html).
+After installation, run `pipx ensurepath` if needed and reopen your terminal.
+For optional AI-agent tool integration, see [MCP setup](mcp.md).
 
-Verify either installation:
+Verify the installation:
 
 ```bash
 agent-safe --version
 ```
 
-If the command is not found, open a new terminal after installation or use:
+### Alternative: pip in a virtual environment
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate it with `.venv\Scripts\Activate.ps1` in PowerShell, or
+`source .venv/bin/activate` on macOS/Linux. Then install:
+
+```bash
+python -m pip install agent-safe-runner
+```
+
+For this pip installation, the module command is also available:
 
 ```bash
 python -m agent_safe_runner --version
 ```
+
+The system Python cannot import an app isolated by pipx; use `agent-safe` for
+pipx installations instead of the module command.
+
+### Unreleased source from GitHub
+
+For testing development changes in a separate environment, use:
+
+```bash
+python -m pip install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
+```
+
+The `main` branch can include changes newer than the published release.
 
 ## Run the first safe job
 
@@ -151,9 +171,14 @@ Before upgrading from 0.1.x/0.2.x, stop workers and back up your state. Read the
 [migration checklist](migration-0.3.md); migration does not approve old jobs.
 
 ```bash
-python -m pip install --upgrade "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
-python -m pip uninstall agent-safe-runner
+pipx upgrade agent-safe-runner
+pipx uninstall agent-safe-runner
 ```
+
+For a pip installation, use `python -m pip install --upgrade agent-safe-runner`
+or `python -m pip uninstall agent-safe-runner` inside its activated environment.
+If switching from a GitHub-source pipx installation to PyPI, uninstall the app
+and install it again by package name; keep your data files in place.
 
 Uninstalling the package does not remove local database, policy, or audit files.
 
@@ -161,8 +186,9 @@ Uninstalling the package does not remove local database, policy, or audit files.
 
 ### `agent-safe` is not found
 
-Restart the terminal, make sure your Python scripts directory is on `PATH`, or
-run `python -m agent_safe_runner` instead of `agent-safe`.
+For pipx, run `pipx ensurepath`, reopen the terminal, and check `pipx list`.
+For pip, activate the environment where you installed the package; you can also
+run `python -m agent_safe_runner` there instead of `agent-safe`.
 
 ### A command is denied
 

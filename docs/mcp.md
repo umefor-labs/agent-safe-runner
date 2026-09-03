@@ -6,14 +6,7 @@ account. The ordinary CLI remains dependency-free.
 
 ## Install
 
-Until a release is available on [PyPI](https://pypi.org/project/agent-safe-runner/),
-install the MCP extra from GitHub:
-
-```bash
-pipx install "agent-safe-runner[mcp] @ https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
-```
-
-Once published, the equivalent PyPI command is:
+Install the optional MCP extra from [PyPI](https://pypi.org/project/agent-safe-runner/):
 
 ```bash
 pipx install "agent-safe-runner[mcp]"
@@ -22,7 +15,7 @@ pipx install "agent-safe-runner[mcp]"
 For an existing core-only pipx installation, add the optional dependencies with
 `pipx inject agent-safe-runner "mcp>=2.1,<3" "jsonschema>=4.20,<5"` after upgrading
 the core to 0.4.0. With pip in a virtual environment, install the same extra using
-`python -m pip install "agent-safe-runner[mcp]"` once it is published.
+`python -m pip install "agent-safe-runner[mcp]"`.
 
 ## Prepare a dedicated workspace
 

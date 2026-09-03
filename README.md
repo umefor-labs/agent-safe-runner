@@ -43,10 +43,11 @@ This runner makes those controls explicit without adding a service, broker, or c
 
 Python 3.11 or newer is required.
 
-Install the latest version directly from GitHub:
+Install the published release from [PyPI](https://pypi.org/project/agent-safe-runner/)
+in an isolated environment:
 
 ```bash
-python -m pip install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
+pipx install agent-safe-runner
 ```
 
 Confirm that the command is available:
@@ -55,25 +56,14 @@ Confirm that the command is available:
 agent-safe --version
 ```
 
-If your system does not expose the `agent-safe` command after installation,
-use `python -m agent_safe_runner` in its place.
-
-### Short installation command (after PyPI publication)
-
-Once a release is listed on [PyPI](https://pypi.org/project/agent-safe-runner/),
-users can install it in isolation with:
-
-```bash
-pipx install agent-safe-runner
-```
-
-Until the first PyPI upload is verified, use the GitHub installation above.
-A GitHub push alone does not publish to PyPI; maintainers can follow the
-[publishing checklist](docs/publishing.md).
+Need pipx first? Follow the [official installation guide](https://pipx.pypa.io/latest/how-to/install-pipx.html).
+If `agent-safe` is not found, run `pipx ensurepath` and reopen your terminal.
+Prefer pip? In an activated virtual environment, use
+`python -m pip install agent-safe-runner`.
 
 For AI-agent integrations, see the [optional MCP adapter](docs/mcp.md).
 
-For an isolated installation with `pipx`, see the
+For setup, troubleshooting, and GitHub source installation, see the
 [getting-started guide](docs/getting-started.md). Contributors should use the
 [development setup](CONTRIBUTING.md).
 
@@ -167,18 +157,20 @@ approved queued job, use `cancel`.
 before installing. Old queued jobs become pending and will not run until
 reviewed. See the [0.3 migration guide](docs/migration-0.3.md).
 
-Upgrade to the latest GitHub version:
+Upgrade a pipx installation to the latest published release:
 
 ```bash
-python -m pip install --upgrade "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
+pipx upgrade agent-safe-runner
 ```
 
 Remove the command-line application:
 
 ```bash
-python -m pip uninstall agent-safe-runner
+pipx uninstall agent-safe-runner
 ```
 
+For a pip installation, use `python -m pip install --upgrade agent-safe-runner`
+or `python -m pip uninstall agent-safe-runner` inside its virtual environment.
 Uninstalling does not delete your queue, policy, or audit files.
 
 ## Policy
