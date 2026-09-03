@@ -33,6 +33,11 @@ other Python packages:
 pipx install "https://github.com/umefor-labs/agent-safe-runner/archive/refs/heads/main.zip"
 ```
 
+After a release is published on [PyPI](https://pypi.org/project/agent-safe-runner/),
+the shorter equivalent is `pipx install agent-safe-runner`. Before the first
+PyPI upload, use the GitHub URL above. For optional AI-agent tool integration,
+see [MCP setup](mcp.md).
+
 Verify either installation:
 
 ```bash

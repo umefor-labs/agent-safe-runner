@@ -36,6 +36,7 @@ This runner makes those controls explicit without adding a service, broker, or c
 - Minimal child-process environment and redacted output capture
 - Append-only JSONL audit events with a verifiable SHA-256 hash chain
 - Structured JSON output and errors for scripting
+- Optional stdio MCP adapter with proposal/read-only tools; no approval or execution tools
 - Standard-library runtime with no required third-party dependencies
 
 ## Install
@@ -54,8 +55,23 @@ Confirm that the command is available:
 agent-safe --version
 ```
 
-The package is not on PyPI yet. If your system does not expose the `agent-safe`
-command after installation, use `python -m agent_safe_runner` in its place.
+If your system does not expose the `agent-safe` command after installation,
+use `python -m agent_safe_runner` in its place.
+
+### Short installation command (after PyPI publication)
+
+Once a release is listed on [PyPI](https://pypi.org/project/agent-safe-runner/),
+users can install it in isolation with:
+
+```bash
+pipx install agent-safe-runner
+```
+
+Until the first PyPI upload is verified, use the GitHub installation above.
+A GitHub push alone does not publish to PyPI; maintainers can follow the
+[publishing checklist](docs/publishing.md).
+
+For AI-agent integrations, see the [optional MCP adapter](docs/mcp.md).
 
 For an isolated installation with `pipx`, see the
 [getting-started guide](docs/getting-started.md). Contributors should use the
@@ -220,7 +236,7 @@ These runtime files are ignored by Git. SQLite commands are stored in plain text
 - Approval records are not signatures or user authentication. This gate cannot constrain an agent that already has unrestricted terminal or file access.
 - SQLite state and JSONL audit are separate stores, not a single crash-atomic transaction. See [Architecture](docs/architecture.md).
 - Output limits bound stored text, not peak capture memory; lease recovery is at-least-once, not an exactly-once guarantee for external side effects.
-- There is no remote API, scheduler daemon, plugin system, or secret-provider integration yet.
+- MCP is local stdio only. There is no remote API, scheduler daemon, plugin system, or secret-provider integration yet.
 
 See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), [Roadmap](ROADMAP.md), [Contributing](CONTRIBUTING.md), and [Security policy](SECURITY.md).
 

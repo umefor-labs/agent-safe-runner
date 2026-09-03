@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-03
+
+### Added
+
+- Optional local stdio MCP interface: submit_command, get_job, list_jobs, assess_job, verify_audit.
+- Strict bounded input schemas, MCP source labels, namespaced idempotency keys, redacted errors, and per-request policy reload.
+- Read-only SQLite access for MCP inspection; approval/execution remain separate operator actions.
+- Real subprocess MCP client tests, core-only dependency checks, and optional-extra CI coverage.
+- PyPI Trusted Publishing workflow with cross-platform tests, artifact validation, pipx smoke test, and isolated OIDC publishing job.
+- MCP setup and first-time PyPI publication documentation. The workflow alone does not mean PyPI publication has completed.
+
 ## [0.3.0] - 2026-09-02
 
 ### Added

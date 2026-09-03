@@ -58,18 +58,23 @@ class JobStore:
         policy: Policy | None = None,
         clock: Callable[[], float] = time.time,
         retry_base_seconds: float = 2.0,
+        read_only: bool = False,
     ):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if not read_only:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
         self.audit = AuditLog(audit_path)
         self.policy = policy or Policy.deny_all()
         self.clock = clock
         self.retry_base_seconds = retry_base_seconds
-        self._db = sqlite3.connect(self.path, timeout=10)
+        self._db = (sqlite3.connect(self.path.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+                    if read_only else sqlite3.connect(self.path, timeout=10))
         self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
+        if not read_only:
+            self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA busy_timeout=10000")
-        self._initialize_schema()
+        if not read_only:
+            self._initialize_schema()
 
     def _initialize_schema(self) -> None:
         self._db.execute("BEGIN IMMEDIATE")

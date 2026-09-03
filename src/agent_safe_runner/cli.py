@@ -89,6 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
     retry.add_argument("job_id")
 
     sub.add_parser("audit-verify", help="Verify the JSONL audit hash chain")
+    sub.add_parser("mcp", help="Serve proposal/read-only MCP over stdio; requires absolute global paths and [mcp]")
     return parser
 
 
@@ -105,6 +106,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.action == "audit-verify":
             _emit(AuditLog(args.audit).verify())
+            return 0
+        if args.action == "mcp":
+            from .mcp_server import serve
+
+            serve(args.db, args.audit, args.policy)
             return 0
 
         policy = Policy.from_file(args.policy)

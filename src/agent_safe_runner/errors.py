@@ -16,6 +16,10 @@ class ApprovalRequired(RunnerError):
     code = "approval_required"
 
 
+class OptionalDependencyMissing(RunnerError):
+    code = "optional_dependency_missing"
+
+
 class SensitiveInputError(RunnerError):
     code = "sensitive_input"
 
