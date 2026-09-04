@@ -88,6 +88,16 @@ agent-safe init-policy
 Open `agent-safe-policy.json` and review it. Relative working roots are resolved
 from the directory containing that policy file.
 
+Check its structure before submitting jobs:
+
+```bash
+agent-safe check-policy
+```
+
+This reads only the policy and does not create queue/audit files or execute a
+command. `valid: true` means the configuration is well-formed, not that every
+rule is safe. For another file, use `agent-safe --policy /path/to/policy.json check-policy`.
+
 Queue a harmless command:
 
 ```bash
@@ -195,6 +205,20 @@ run `python -m agent_safe_runner` there instead of `agent-safe`.
 Check that the executable and argument prefix match an `allowed_commands` rule,
 the job's working directory is under an `allowed_working_roots` entry, and the
 timeout is within `max_timeout_seconds`.
+
+### A policy that loaded in 0.4.0 is rejected
+
+Run `check-policy`. Starting in 0.4.1, field names and JSON types are strict:
+`args_prefix` must be an array such as `["--version"]`, limits must be integers
+such as `300` (not `"300"` or `true`), and duplicate/unknown keys are rejected.
+Save files as UTF-8; a UTF-8 byte-order mark is accepted. Fix the policy rather
+than removing command restrictions to silence an error.
+
+### `storage_error`
+
+Stop workers and check the database path, file permissions, and whether another
+process has locked it. Back up the file before investigating possible corruption;
+do not delete the queue to bypass the error.
 
 ### `approval_required`
 

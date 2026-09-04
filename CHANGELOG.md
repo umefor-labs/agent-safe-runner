@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-04
+
+### Added
+
+- `agent-safe check-policy` validates the selected policy without opening SQLite,
+  writing audit events, approving jobs, or executing commands.
+
+### Fixed
+
+- Reject unknown policy/rule fields and duplicate JSON keys. In particular, a
+  misspelled `args_prefix` can no longer silently become an unrestricted prefix.
+- Reject wrong field types instead of coercing numbers/booleans or treating
+  strings as arrays; reject empty programs, empty roots, and NUL characters.
+- Accept UTF-8 policy files with a byte-order mark, including Windows editor output.
+- Return a structured `storage_error` for SQLite failures instead of a traceback;
+  redact expected CLI error messages.
+- Ship the verified PyPI/pipx installation instructions in package metadata.
+
+### Compatibility
+
+- Valid version-1 policies and the default deny-on-missing-file behavior remain
+  supported. `check-policy` treats a missing file as an error.
+- Previously tolerated malformed policies now fail closed. Remove unknown fields
+  and fix types before restarting workers. Validation is not a security review
+  and does not prove a particular command is allowed; use `assess JOB_ID` too.
+
 ## [0.4.0] - 2026-09-03
 
 ### Added

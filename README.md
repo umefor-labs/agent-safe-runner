@@ -27,6 +27,7 @@ This runner makes those controls explicit without adding a service, broker, or c
 ## Features
 
 - Deny-by-default JSON policy with command-prefix and working-directory rules
+- Strict policy validation and a read-only `check-policy` command
 - Approval inbox, read-only assessment, and explicit approve/deny decisions
 - Dry run by default; real execution requires approval, policy allowance, and `--execute`
 - SQLite queue with idempotency keys and fail-closed schema migration from `0.1.x` / `0.2.x`
@@ -75,6 +76,7 @@ Create a dedicated workspace so the queue, policy, and audit files stay together
 mkdir agent-safe-workspace
 cd agent-safe-workspace
 agent-safe init-policy
+agent-safe check-policy
 ```
 
 The generated `agent-safe-policy.json` contains a few example rules. Review it
@@ -123,6 +125,7 @@ upgrades, troubleshooting, and a complete first-run walkthrough.
 ## Common commands
 
 ```bash
+agent-safe check-policy
 agent-safe list
 agent-safe inbox
 agent-safe list --approval pending
@@ -174,6 +177,12 @@ or `python -m pip uninstall agent-safe-runner` inside its virtual environment.
 Uninstalling does not delete your queue, policy, or audit files.
 
 ## Policy
+
+After editing a policy, run `agent-safe --policy /path/to/policy.json check-policy`.
+It validates configuration only; it does not approve jobs or prove a command is safe.
+Version 0.4.1 rejects unknown fields, duplicate keys, and incorrect JSON types.
+An omitted or empty `args_prefix` still explicitly allows all arguments for that
+program, so review such rules carefully. UTF-8 files with or without a BOM work.
 
 Execution is denied when the policy file is absent. A policy contains:
 

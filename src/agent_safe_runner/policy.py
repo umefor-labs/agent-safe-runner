@@ -10,6 +10,24 @@ from typing import Any
 from .errors import PolicyViolation
 
 
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise PolicyViolation("policy JSON contains duplicate keys")
+        result[key] = value
+    return result
+
+
+def _string_list(value: Any, field: str, *, allow_empty: bool = False) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or "\x00" in item or (not item and not allow_empty)
+        for item in value
+    ):
+        raise PolicyViolation(f"{field} must be an array of valid strings")
+    return tuple(value)
+
+
 def _resolved_program(value: str, cwd: str | None = None) -> str | None:
     candidate = Path(value)
     if candidate.is_absolute() or os.path.dirname(value):
@@ -45,38 +63,60 @@ class Policy:
         return cls()
 
     @classmethod
-    def from_file(cls, path: str | Path) -> "Policy":
+    def from_file(cls, path: str | Path, *, allow_missing: bool = True) -> "Policy":
         policy_path = Path(path)
         try:
-            payload = json.loads(policy_path.read_text(encoding="utf-8"))
+            payload = json.loads(policy_path.read_text(encoding="utf-8-sig"),
+                                 object_pairs_hook=_unique_object)
         except FileNotFoundError:
+            if not allow_missing:
+                raise PolicyViolation("policy file does not exist") from None
             return cls.deny_all()
         except json.JSONDecodeError as exc:
-            raise PolicyViolation(f"invalid policy JSON: {exc}") from exc
-        if not isinstance(payload, dict) or payload.get("version") != 1:
+            raise PolicyViolation(f"invalid policy JSON at line {exc.lineno}, column {exc.colno}") from exc
+        except UnicodeError as exc:
+            raise PolicyViolation("policy file must be UTF-8 encoded") from exc
+        if not isinstance(payload, dict) or type(payload.get("version")) is not int or payload["version"] != 1:
             raise PolicyViolation("unsupported policy version")
+        if set(payload) - {"version", "allowed_commands", "allowed_working_roots",
+                           "denied_arguments", "environment_allowlist", "max_timeout_seconds", "max_output_chars"}:
+            raise PolicyViolation("policy contains unknown fields; check field names")
+        raw_rules = payload.get("allowed_commands", [])
+        if not isinstance(raw_rules, list):
+            raise PolicyViolation("allowed_commands must be an array of rule objects")
+        rules = []
+        for rule in raw_rules:
+            if not isinstance(rule, dict) or set(rule) - {"program", "args_prefix"}:
+                raise PolicyViolation("command rules must be objects with only program and args_prefix")
+            program = rule.get("program")
+            if not isinstance(program, str) or not program or "\x00" in program:
+                raise PolicyViolation("rule program must be a nonempty string without NUL characters")
+            rules.append(CommandRule(program, _string_list(rule.get("args_prefix", []),
+                                                           "args_prefix", allow_empty=True)))
+        raw_roots = _string_list(payload.get("allowed_working_roots", []), "allowed_working_roots")
+        denied = _string_list(payload.get("denied_arguments", []), "denied_arguments")
+        environment = _string_list(payload.get("environment_allowlist", list(cls.environment_allowlist)),
+                                   "environment_allowlist")
+        max_timeout = payload.get("max_timeout_seconds", 300)
+        max_output = payload.get("max_output_chars", 8000)
+        if type(max_timeout) is not int or type(max_output) is not int:
+            raise PolicyViolation("policy limits must be integers, not strings, booleans, or decimals")
+        if not 1 <= max_timeout <= 86400 or not 256 <= max_output <= 1_000_000:
+            raise PolicyViolation("policy limits are out of bounds")
         try:
-            rules = tuple(
-                CommandRule(str(rule["program"]), tuple(str(arg) for arg in rule.get("args_prefix", [])))
-                for rule in payload.get("allowed_commands", [])
-            )
             roots = tuple(
                 (policy_path.parent / Path(root)).resolve(strict=False)
                 if not Path(root).is_absolute()
                 else Path(root).resolve(strict=False)
-                for root in payload.get("allowed_working_roots", [])
+                for root in raw_roots
             )
-            max_timeout = int(payload.get("max_timeout_seconds", 300))
-            max_output = int(payload.get("max_output_chars", 8000))
-        except (AttributeError, KeyError, TypeError, ValueError) as exc:
-            raise PolicyViolation("invalid policy fields") from exc
-        if not 1 <= max_timeout <= 86400 or not 256 <= max_output <= 1_000_000:
-            raise PolicyViolation("policy limits are out of bounds")
+        except (OSError, ValueError) as exc:
+            raise PolicyViolation("invalid policy working roots") from exc
         return cls(
-            rules=rules,
+            rules=tuple(rules),
             allowed_roots=roots,
-            denied_arguments=tuple(str(item).casefold() for item in payload.get("denied_arguments", [])),
-            environment_allowlist=tuple(str(item) for item in payload.get("environment_allowlist", cls.environment_allowlist)),
+            denied_arguments=tuple(item.casefold() for item in denied),
+            environment_allowlist=environment,
             max_timeout_seconds=max_timeout,
             max_output_chars=max_output,
         )

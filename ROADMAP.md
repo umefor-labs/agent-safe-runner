@@ -1,13 +1,13 @@
 # Roadmap
 
-Updated 2026-09-03. Dates are targets, not evidence of completion. This project
+Updated 2026-09-04. Dates are targets, not evidence of completion. This project
 prioritizes useful, verifiable safeguards over feature count or artificial stars.
 
 | Version | Focus | Acceptance gate | Target |
 | --- | --- | --- | --- |
 | 0.3.0 | Separate approval and execution | Pending jobs cannot execute; migration fails closed; decision races and CLI workflow tested | September 2 |
 | 0.4.0 | Optional local MCP stdio adapter | Proposal/read-only tools only; real client integration tests; core works without MCP installed | September 3–6 |
-| 0.4.1 | Feedback-driven beta fixes | Reproduce user reports, test clean installation, preserve compatibility | September 7–9 |
+| 0.4.1 | Policy validation and user-facing diagnostics | Malformed policies rejected; read-only validation; clean installation and regression tests | September 4 |
 | Release freeze | Documentation and reliability | No new features; CI green; known limits and reproducible examples reviewed | September 10 |
 
 ## 0.4.0: optional MCP integration
@@ -20,6 +20,10 @@ prioritizes useful, verifiable safeguards over feature count or artificial stars
 - Subprocess stdio tests use the official SDK client; individual desktop hosts and model tool-selection behavior need separate validation.
 
 ## Distribution and adoption
+
+0.4.1 focuses on maintainer-reproduced policy parsing defects and installation
+diagnostics; no external user reports were available when this patch was prepared.
+It adds `check-policy` without expanding MCP permissions or execution authority.
 
 - GitHub source-archive installation remains supported.
 - [0.4.0 is published on PyPI](https://pypi.org/project/agent-safe-runner/0.4.0/).

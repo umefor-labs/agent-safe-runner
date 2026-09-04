@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-safe-runner"
-version = "0.4.0"
+version = "0.4.1"
 description = "A local-first, auditable job runner for AI-agent automation"
 readme = "README.md"
 requires-python = ">=3.11"

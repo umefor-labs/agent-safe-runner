@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any, Sequence
@@ -11,6 +12,7 @@ from .audit import AuditLog
 from .core import APPROVAL_STATUSES, JobStore
 from .errors import RunnerError
 from .policy import Policy
+from .redaction import redact_text
 
 
 STATUSES = ("queued", "running", "retry_wait", "succeeded", "failed", "cancelled", "dead_letter")
@@ -40,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_policy = sub.add_parser("init-policy", help="Write a conservative sample policy")
     init_policy.add_argument("path", nargs="?", default="agent-safe-policy.json")
+    sub.add_parser("check-policy", help="Validate --policy without opening the queue or executing commands")
 
     submit = sub.add_parser("submit", help="Queue a command without executing it")
     submit.add_argument("--key")
@@ -104,6 +107,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             destination.write_text(json.dumps(Policy.sample(), indent=2) + "\n", encoding="utf-8")
             _emit({"status": "created", "path": str(destination.resolve())})
             return 0
+        if args.action == "check-policy":
+            policy = Policy.from_file(args.policy, allow_missing=False)
+            _emit({"valid": True, "rule_count": len(policy.rules),
+                   "allowed_working_roots": [str(root) for root in policy.allowed_roots],
+                   "max_timeout_seconds": policy.max_timeout_seconds,
+                   "max_output_chars": policy.max_output_chars})
+            return 0
         if args.action == "audit-verify":
             _emit(AuditLog(args.audit).verify())
             return 0
@@ -146,9 +156,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif args.action == "retry":
                 _emit(store.retry(args.job_id).to_dict())
         return 0
+    except sqlite3.Error:
+        _emit({"error": {"code": "storage_error", "message":
+               "Local database is unavailable; check paths, permissions, and database health."}}, error=True)
+        return 2
     except (RunnerError, ValueError, OSError) as exc:
         code = getattr(exc, "code", "invalid_input")
-        _emit({"error": {"code": code, "message": str(exc)}}, error=True)
+        _emit({"error": {"code": code, "message": redact_text(str(exc))}}, error=True)
         return 2
 
 
